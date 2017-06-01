@@ -54,12 +54,8 @@ def FC_bayes(x,shape,activation,scope,init=1e-3, bias=True):
         return a,W_noise,b_noise, reg
 
 X = 1.5*(2*np.random.rand(1000)-1)
-Y = 0.5*np.sin(X*2*np.pi)+X**2 +1
+Y = 2*X +1 + np.random.randn(1000)*0.4
 
-inds = (X<-0.3)+(X>0.3)
-inds2 = (X>=-0.3)*(X<=0.3)
-Y[inds] += np.random.randn(1000)[inds]*0.2
-Y[inds2] += np.random.randn(1000)[inds2]*0.2
 X_train = X.reshape((-1,1))
 Y_train = Y.reshape((-1,1))
 # plt.scatter(X,Y,linewidth=2)
@@ -68,48 +64,38 @@ Y_train = Y.reshape((-1,1))
 # inds = (X<-0.3)+(X>0.3)
 # plt.scatter(X[inds],Y[inds],linewidth=2)
 # plt.show()
-N1 = 100
-N2 = 1
+N1 = 1
+
 x_tf = tf.placeholder(shape=[None,1],dtype=tf.float32)
 y_tf = tf.placeholder(shape=[None,1],dtype=tf.float32)
 
-a1,we1,be1,r1 = FC_bayes(x_tf,(1,N1),'tanh','fc1')
-a2,we2,be2,r2 = FC_bayes(a1,(N1,N2),None,'fc2')
-a3,we3,be3,r3 = FC_bayes(a2,(N2,1),None,'fc3')
-#loss = tf.reduce_mean(tf.square(y_tf-a2))
-loss = tf.reduce_mean(tf.square(y_tf-a2))+1e-4*(r1+r2)
+a1,we1,be1,r1 = FC_bayes(x_tf,(1,N1),None,'fc1')
 
-# opt = tf.train.AdamOptimizer(1e-5)
-opt = tf.train.RMSPropOptimizer(1e-2)
+#loss = tf.reduce_mean(tf.square(y_tf-a2))
+loss = tf.reduce_mean(tf.square(y_tf-a1))+0.15*(r1)
+
+opt = tf.train.AdamOptimizer(5e-3)
 train = opt.minimize(loss)
 N = len(X_train)
 sess = tf.Session()
 sess.run(tf.initialize_all_variables())
-for i in range(60000):
-    sel = np.random.choice(N,size=32)
+for i in range(3000):
+    sel = np.random.choice(N,size=100)
     x = X_train[sel]
     y = Y_train[sel]
     e1 = np.random.randn(1,N1)
     e2 = np.random.randn(N1)
-    e3 = np.random.randn(N1,N2)
-    e4 = np.random.randn(N2)
-    e5 = np.random.randn(N2,1)
-    e6 = np.random.randn(1)
 
-    _,l = sess.run([train,loss],{x_tf:x,y_tf:y,we1:e1,be1:e2,we2:e3,be2:e4,we3:e5,be3:e6})
+    _,l = sess.run([train,loss],{x_tf:x,y_tf:y,we1:e1,be1:e2})
     print '{}: loss = {}'.format(i,l)
 
 plt.figure()
-Xar = np.arange(-2.5,2.5,5.0/100).reshape((-1,1))
+Xar = np.arange(-1.5,1.5,3.0/100).reshape((-1,1))
 plt.scatter(X_train,Y_train)
 for i in range(20):
     e1 = np.random.randn(1,N1)
     e2 = np.random.randn(N1)
-    e3 = np.random.randn(N1,N2)
-    e4 = np.random.randn(N2)
-    e5 = np.random.randn(N2,1)
-    e6 = np.random.randn(1)
 
-    yhat = sess.run(a2,{x_tf:Xar,we1:e1,be1:e2,we2:e3,be2:e4,we3:e5,be3:e6})
+    yhat = sess.run(a1,{x_tf:Xar,we1:e1,be1:e2})
     plt.plot(Xar,yhat,linewidth=2,color='r')
 plt.show()
